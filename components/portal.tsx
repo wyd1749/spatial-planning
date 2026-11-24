@@ -208,6 +208,12 @@ export function PortalShell({ role, name, eyebrow, title, subtitle, actions, sta
     document.addEventListener("visibilitychange", beat)
     return () => { stop = true; clearInterval(t); document.removeEventListener("visibilitychange", beat) }
   }, [])
+  // instant refresh: when anyone signs in/out the database pings the live channel (tick goes up) -> reload who's online right away
+  useEffect(() => {
+    let stop = false
+    fetch("/api/presence").then(r => r.ok ? r.json() : null).then(d => { if (!stop && d) setOnline(d.online || []) }).catch(() => {})
+    return () => { stop = true }
+  }, [tick])
   // unread activity (other people's actions since this person last opened the activity log)
   useEffect(() => {
     try {
