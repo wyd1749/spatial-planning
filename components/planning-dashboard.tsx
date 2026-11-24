@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, CalendarDays, ChartColumn, ChevronDown, CircleCheck, Clock3, Download, Eye, FilePlus2, FolderOpen, Info, MoreHorizontal, Pencil, Search, SlidersHorizontal, Zap } from "lucide-react"
+import { ArrowRight, CalendarDays, ChartColumn, ChevronDown, CircleCheck, Clock3, Download, Eye, FileSpreadsheet, FilePlus2, FolderOpen, Info, MoreHorizontal, Pencil, Search, SlidersHorizontal, Zap } from "lucide-react"
 import { useLiveTick } from "@/lib/live"
 import { normStage } from "@/lib/workflow"
+import ReportPreview, { tally, withColors, type RPCell } from "@/components/report-preview"
 import { CardHead, DATE_RANGES, STAGES, STATUS_FILTERS, StatusPill, PortalShell, appStatItems, inRange, matchStatus, useApps, useGreeting, firstName, type Role } from "@/components/portal"
 
 export default function PlanningDashboard({ role, name }: { role: Role; name: string }) {
@@ -18,6 +19,7 @@ export default function PlanningDashboard({ role, name }: { role: Role; name: st
   const [status, setStatus] = useState("all")
   const [range, setRange] = useState("any")
   const [notice, setNotice] = useState("")
+  const [preview, setPreview] = useState(false)
   useEffect(() => { fetch("/api/activity").then(r => r.json()).then(d => setActivity(d.activity || [])).catch(() => {}) }, [tick])
   useEffect(() => { if (error) setNotice(error) }, [error])
 
@@ -31,6 +33,15 @@ export default function PlanningDashboard({ role, name }: { role: Role; name: st
   let acc = 0
   const donut = staged ? `conic-gradient(${stageRows.filter(s => s.count).map(s => { const from = acc; acc += (s.count / staged) * 100; return `${s.color} ${from}% ${acc}%` }).join(",")})` : "#e3ecf8"
 
+  const sheet = (() => {
+    const columns = ["Reference", "Applicant", "Type", "Property", "Stage", "Officer", "Received", "Due", "Status"]
+    const cells: RPCell[][] = apps.map(a => [a.reference, a.applicant, a.type, a.stand, normStage(a.stage), a.officer, a.received, a.due || "", a.status])
+    return { columns, cells, summaries: [
+      { title: "By status", kind: "stack" as const, items: withColors(tally(apps.map(a => a.status))) },
+      { title: "By stage", kind: "stack" as const, items: withColors(tally(apps.map(a => normStage(a.stage)))) },
+      { title: "By application type", kind: "bars" as const, items: tally(apps.map(a => a.type)).slice(0, 6) },
+    ] }
+  })()
   function exportCSV() {
     const cols = ["reference", "applicant", "type", "stand", "stage", "officer", "received", "due", "status"]
     const csv = [cols.join(","), ...apps.map(a => cols.map(k => `"${String(a[k] ?? "").replaceAll('"', '""')}"`).join(","))].join("\n")
@@ -45,7 +56,7 @@ export default function PlanningDashboard({ role, name }: { role: Role; name: st
       eyebrow="DEPARTMENT OVERVIEW"
       title={`${greeting}, ${firstName(name)}.`}
       subtitle={isManager ? "Here’s what’s happening today in Spatial Planning." : "Your applications, consultations and deadlines at a glance."}
-      actions={<><button className="pt-btn" onClick={exportCSV}><Download size={18} />Export report</button><button className="pt-btn pri" onClick={() => router.push("/applications/new")}><FilePlus2 size={18} />New application</button></>}
+      actions={<><button className="pt-btn" disabled={apps.length === 0} onClick={() => setPreview(true)}><FileSpreadsheet size={18} />Preview</button><button className="pt-btn" onClick={exportCSV}><Download size={18} />Export report</button><button className="pt-btn pri" onClick={() => router.push("/applications/new")}><FilePlus2 size={18} />New application</button></>}
       stats={appStatItems(apps, "dash", key => router.push(`/applications?status=${encodeURIComponent(key)}`))}
     >
       <div className="pt-grid2">
@@ -104,6 +115,7 @@ export default function PlanningDashboard({ role, name }: { role: Role; name: st
           </table>
         </div>
       </section>
+    {preview && <ReportPreview filename="spatial-planning-applications.csv" columns={sheet.columns} rows={sheet.cells} summaries={sheet.summaries} onClose={() => setPreview(false)} />}
     </PortalShell>
   )
 }

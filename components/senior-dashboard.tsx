@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useMemo, useState, type FormEvent } from "react"
-import { ArrowRight, ChevronDown, Download, FilePlus2, Lock, Mail, MoreHorizontal, Plus, Search, ShieldCheck, SlidersHorizontal, Users, X } from "lucide-react"
+import { ArrowRight, ChevronDown, Download, FileSpreadsheet, FilePlus2, Lock, Mail, MoreHorizontal, Plus, Search, ShieldCheck, SlidersHorizontal, Users, X } from "lucide-react"
 import { useLiveTick } from "@/lib/live"
+import ReportPreview, { tally, withColors, type RPCell } from "@/components/report-preview"
 import { CardHead, PortalShell, firstName, initials, useGreeting, type StatItem } from "@/components/portal"
 
 type StaffRole = "Senior officer" | "Management" | "Planning officer"
@@ -27,6 +28,7 @@ export default function SeniorDashboard({ seniorName }: { seniorName: string }) 
   const [roleFilter, setRoleFilter] = useState("all")
   const [notice, setNotice] = useState("")
   const [showForm, setShowForm] = useState(true)
+  const [preview, setPreview] = useState(false)
 
   useEffect(() => {
     fetch("/api/admin/users").then(r => r.ok ? r.json() : Promise.reject()).then(data => setStaff(data.users.map((u: any) => ({ ...u, status: u.status || "Active" }))))
@@ -35,6 +37,14 @@ export default function SeniorDashboard({ seniorName }: { seniorName: string }) 
 
   const filtered = useMemo(() => staff.filter(m => `${m.name} ${m.email} ${m.role}`.toLowerCase().includes(query.toLowerCase()) && (roleFilter === "all" || m.role === roleFilter)), [staff, query, roleFilter])
 
+  const sheet = (() => {
+    const columns = ["Name", "Email", "Role", "Status"]
+    const cells: RPCell[][] = staff.map(u => [u.name, u.email, u.role, u.status])
+    return { columns, cells, summaries: [
+      { title: "By role", kind: "stack" as const, items: withColors(tally(staff.map(u => u.role))) },
+      { title: "By account status", kind: "stack" as const, items: withColors(tally(staff.map(u => u.status))) },
+    ] }
+  })()
   function exportUsersCSV() {
     const csv = ["name,email,role,status", ...staff.map(u => `"${u.name}","${u.email}","${u.role}","${u.status}"`)].join("\n")
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }))
@@ -85,7 +95,7 @@ export default function SeniorDashboard({ seniorName }: { seniorName: string }) 
       <div className="pt-grid2" style={{ alignItems: "start" }}>
         <section className="pt-card">
           <CardHead icon={Users} title="Department Users" count={`${staff.length} ${staff.length === 1 ? "user" : "users"}`} sub="Review staff accounts and assign their workspace roles"
-            right={<button className="pt-btn sm" onClick={exportUsersCSV}><Download size={16} />Export</button>} />
+            right={<div className="pt-acts"><button className="pt-btn sm" disabled={staff.length === 0} onClick={() => setPreview(true)}><FileSpreadsheet size={16} />Preview</button><button className="pt-btn sm" onClick={exportUsersCSV}><Download size={16} />Export</button></div>} />
           <div className="pt-tools">
             <label className="pt-search"><Search size={18} /><input aria-label="Search users" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by name, email or role" /></label>
             <label className="pt-sel"><SlidersHorizontal size={16} /><select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} aria-label="Filter by role"><option value="all">All roles</option><option>Senior officer</option><option>Management</option><option>Planning officer</option></select><ChevronDown size={15} /></label>
@@ -125,6 +135,7 @@ export default function SeniorDashboard({ seniorName }: { seniorName: string }) 
           )}
         </section>
       </div>
+    {preview && <ReportPreview filename="spatial-planning-users.csv" columns={sheet.columns} rows={sheet.cells} summaries={sheet.summaries} onClose={() => setPreview(false)} />}
     </PortalShell>
   )
 }
