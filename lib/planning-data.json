@@ -1,0 +1,21 @@
+{
+  "applications": [
+    {"reference":"SP/26/SUB/014","applicant":"Tendai Moyo","type":"Subdivision","stand":"Lot 18, Highlands","stage":"Consultation","officer":"T. Moyo","received":"12 Nov 2026","due":"12 Dec 2026","status":"In progress"},
+    {"reference":"SP/26/SC/009","applicant":"Riverside Holdings","type":"Special consent","stand":"42 Borrowdale Rd","stage":"Management review","officer":"R. Ncube","received":"08 Nov 2026","due":"22 Nov 2026","status":"Review"},
+    {"reference":"SP/26/COU/031","applicant":"M. Chikwanha","type":"Change of use","stand":"Plot 7, Avondale","stage":"Requirements check","officer":"A. Dube","received":"05 Nov 2026","due":"19 Nov 2026","status":"In progress"},
+    {"reference":"SP/26/SUB/013","applicant":"Greenfield Estates","type":"Subdivision","stand":"Stand 221, Mount Pleasant","stage":"Council resolution","officer":"T. Moyo","received":"29 Oct 2026","due":"15 Nov 2026","status":"Overdue"},
+    {"reference":"SP/26/SC/008","applicant":"L. Marume","type":"Special consent","stand":"16 Samora Machel Ave","stage":"Decision issued","officer":"R. Ncube","received":"18 Oct 2026","due":"18 Nov 2026","status":"Approved"}
+  ],
+  "workflow": [
+    {"label":"Application received","count":18,"color":"#244e3b"},
+    {"label":"Requirements check","count":12,"color":"#477b5d"},
+    {"label":"Consultation","count":24,"color":"#d5a847"},
+    {"label":"Management review","count":9,"color":"#748ba2"},
+    {"label":"Council decision","count":7,"color":"#b86a48"}
+  ],
+  "activity": [
+    {"initials":"RN","name":"Rudo Ncube","action":"submitted a director's report","application":"SP/26/SC/009","time":"18 min ago"},
+    {"initials":"AD","name":"Anesu Dube","action":"recorded a consultation response","application":"SP/26/COU/031","time":"1 hr ago"},
+    {"initials":"TM","name":"Tendai Moyo","action":"registered a new application","application":"SP/26/SUB/014","time":"2 hrs ago"}
+  ]
+}

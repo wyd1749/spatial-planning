@@ -1,0 +1,13 @@
+{
+  "users": [
+    {
+      "id": "usr-senior-001",
+      "name": "Senior Officer",
+      "email": "seniorofficer@gmail.com",
+      "role": "Senior officer",
+      "passwordSalt": "7886ea4dc4953b3e568674093ad570f6",
+      "passwordHash": "96ef5f48c6770457fa4af863aa09aeade5073dc0695d2e38f48bfd7aea8540d7d3b9d713624d9e28a06844a63f9d1ba3eb8d018ab0450f11a8a240c2dab22d36",
+      "status": "Active"
+    }
+  ]
+}

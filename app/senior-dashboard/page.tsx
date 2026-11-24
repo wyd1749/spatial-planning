@@ -1,0 +1,2 @@
+import SeniorDashboard from "@/components/senior-dashboard";import{currentUser}from"@/lib/auth";import{redirect}from"next/navigation";
+export default async function SeniorDashboardPage(){const user=await currentUser();if(!user)redirect("/");if(user.role!=="Senior officer")redirect(user.role==="Management"?"/management-dashboard":"/planning-dashboard");return <SeniorDashboard seniorName={user.name}/>}

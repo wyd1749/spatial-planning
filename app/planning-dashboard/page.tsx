@@ -1,0 +1,2 @@
+import PlanningDashboard from "@/components/planning-dashboard";import {currentUser} from "@/lib/auth";import{redirect}from"next/navigation";
+export default async function PlanningDashboardPage(){const user=await currentUser();if(!user)redirect("/");if(user.role==="Senior officer")redirect("/senior-dashboard");return <PlanningDashboard role={user.role as "Management" | "Planning officer"} name={user.name}/>}
