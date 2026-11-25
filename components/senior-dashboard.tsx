@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect, useMemo, useState, type FormEvent } from "react"
-import { ArrowRight, ChevronDown, Download, FileSpreadsheet, FilePlus2, Mail, MoreHorizontal, Plus, Search, ShieldCheck, SlidersHorizontal, Users, X } from "lucide-react"
+import { ArrowRight, ChevronDown, Download, FileSpreadsheet, FilePlus2, Mail, KeyRound, LockKeyhole, LockKeyholeOpen, Plus, Search, ShieldCheck, SlidersHorizontal, Users, X } from "lucide-react"
 import { useLiveTick } from "@/lib/live"
 import ReportPreview, { tally, withColors, type RPCell } from "@/components/report-preview"
 import { CardHead, PortalShell, firstName, initials, useGreeting, type StatItem } from "@/components/portal"
 
 type StaffRole = "Senior officer" | "Management" | "Planning officer"
-type StaffMember = { id: number | string; name: string; email: string; role: StaffRole; status: "Active" | "Setup pending" }
+type StaffMember = { id: number | string; name: string; email: string; role: StaffRole; status: "Active" | "Setup pending" | "Locked" }
 
 const roleDescriptions: Record<StaffRole, string> = {
   "Senior officer": "Create staff accounts and assign roles",
@@ -29,6 +29,9 @@ export default function SeniorDashboard({ seniorName }: { seniorName: string }) 
   const [notice, setNotice] = useState("")
   const [showForm, setShowForm] = useState(true)
   const [preview, setPreview] = useState(false)
+  const [resetFor, setResetFor] = useState<StaffMember | null>(null)
+  const [newPw, setNewPw] = useState("")
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     fetch("/api/admin/users").then(r => r.ok ? r.json() : Promise.reject()).then(data => setStaff(data.users.map((u: any) => ({ ...u, status: u.status || "Active" }))))
@@ -71,13 +74,27 @@ export default function SeniorDashboard({ seniorName }: { seniorName: string }) 
     setNotice("Role saved to the accounts JSON file.")
   }
 
-  async function toggleStatus(member: StaffMember) {
-    const next = member.status === "Active" ? "Setup pending" : "Active"
+  async function toggleLock(member: StaffMember) {
+    const next = member.status === "Locked" ? "Active" : "Locked"
+    if (next === "Locked" && !confirm(`Lock ${member.name}'s account? They will be signed out and unable to sign in until you unlock it.`)) return
     const res = await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: member.id, status: next }) })
     const out = await res.json()
-    if (!res.ok) { setNotice(out.error || "Could not update account status."); return }
+    if (!res.ok) { setNotice(out.error || "Could not update the account."); return }
     setStaff(current => current.map(m => m.id === member.id ? { ...m, status: next } : m))
-    setNotice(`${member.name} account status saved as ${next}.`)
+    setNotice(next === "Locked" ? `${member.name}'s account is now locked.` : `${member.name}'s account is unlocked.`)
+  }
+
+  async function resetPassword(event: FormEvent) {
+    event.preventDefault()
+    if (!resetFor) return
+    setBusy(true)
+    try {
+      const res = await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: resetFor.id, password: newPw }) })
+      const out = await res.json()
+      if (!res.ok) { setNotice(out.error || "Could not change the password."); return }
+      setNotice(`Password changed for ${resetFor.name}. Share it with them privately.`)
+      setResetFor(null); setNewPw("")
+    } catch { setNotice("Unable to connect to the account service.") } finally { setBusy(false) }
   }
 
   const stats: StatItem[] = [
@@ -108,8 +125,11 @@ export default function SeniorDashboard({ seniorName }: { seniorName: string }) 
                   <tr key={m.id}>
                     <td><div className="pt-ucell"><span className="pt-avatar" style={{ background: AVATARS[i % 4] }}>{initials(m.name)}</span><span><strong>{m.name}</strong><span className="pt-t2">{m.email}</span></span></div></td>
                     <td><label className="sr-only" htmlFor={`role-${m.id}`}>Role for {m.name}</label><select id={`role-${m.id}`} className="pt-in" style={{ minHeight: 38, width: 170 }} value={m.role} onChange={e => changeRole(m.id, e.target.value as StaffRole)}><option>Senior officer</option><option>Management</option><option>Planning officer</option></select></td>
-                    <td><span className={`pt-pill ${m.status === "Active" ? "green" : "amber"}`}>{m.status}</span></td>
-                    <td><div className="pt-ra"><button aria-label={`Toggle account status for ${m.name}`} title="Toggle Active / Setup pending" onClick={() => toggleStatus(m)}><MoreHorizontal size={18} /></button></div></td>
+                    <td><span className={`pt-pill ${m.status === "Active" ? "green" : "amber"}`} style={m.status === "Locked" ? { background: "#fee2e2", color: "#b91c1c" } : undefined}>{m.status}</span></td>
+                    <td><div className="pt-ra">
+                      <button aria-label={`Change password for ${m.name}`} title="Change password" onClick={() => { setResetFor(m); setNewPw("") }}><KeyRound size={17} /></button>
+                      <button aria-label={m.status === "Locked" ? `Unlock ${m.name}` : `Lock ${m.name}`} title={m.status === "Locked" ? "Unlock account" : "Lock account"} disabled={m.role === "Senior officer" && m.name === seniorName} onClick={() => toggleLock(m)}>{m.status === "Locked" ? <LockKeyholeOpen size={17} /> : <LockKeyhole size={17} />}</button>
+                    </div></td>
                   </tr>
                 ))}
                 {filtered.length === 0 && <tr><td colSpan={4} className="pt-empty">No users match that search.</td></tr>}
@@ -135,6 +155,17 @@ export default function SeniorDashboard({ seniorName }: { seniorName: string }) 
         </section>
       </div>
     {preview && <ReportPreview filename="spatial-planning-users.csv" columns={sheet.columns} rows={sheet.cells} summaries={sheet.summaries} onClose={() => setPreview(false)} />}
+    {resetFor && (
+      <div role="dialog" aria-modal="true" aria-label="Change password" onClick={() => setResetFor(null)} style={{ position: "fixed", inset: 0, zIndex: 100, display: "grid", placeItems: "center", background: "rgba(15,30,60,.45)", padding: 16 }}>
+        <form className="pt-card" onClick={e => e.stopPropagation()} onSubmit={resetPassword} style={{ width: "min(420px,100%)" }}>
+          <CardHead icon={KeyRound} title="Change password" sub={`${resetFor.name} · ${resetFor.email}`} right={<button type="button" className="pt-sq" aria-label="Close" onClick={() => setResetFor(null)}><X size={18} /></button>} />
+          <div className="pt-form">
+            <label className="pt-field">New password<input className="pt-in" type="text" autoFocus autoComplete="off" minLength={8} required value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="At least 8 characters" /></label>
+            <button className="pt-btn pri" type="submit" disabled={busy || newPw.length < 8}>{busy ? "Saving…" : "Save new password"}</button>
+          </div>
+        </form>
+      </div>
+    )}
     </PortalShell>
   )
 }

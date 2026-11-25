@@ -4,11 +4,11 @@ import { cookies } from "next/headers"
 import { db } from "./supabase"
 
 export type UserRole = "Senior officer" | "Management" | "Planning officer"
-export type UserRecord = { id: string; name: string; email: string; role: UserRole; passwordSalt: string; passwordHash: string; status: "Active" | "Setup pending" }
+export type UserRecord = { id: string; name: string; email: string; role: UserRole; passwordSalt: string; passwordHash: string; status: "Active" | "Setup pending" | "Locked"; failedAttempts: number }
 
-type UserRow = { id: string; name: string; email: string; role: string; password_salt: string; password_hash: string; status: string }
-const COLS = "id,name,email,role,password_salt,password_hash,status"
-const toUser = (r: UserRow): UserRecord => ({ id: r.id, name: r.name, email: r.email, role: r.role as UserRole, passwordSalt: r.password_salt, passwordHash: r.password_hash, status: r.status as UserRecord["status"] })
+type UserRow = { id: string; name: string; email: string; role: string; password_salt: string; password_hash: string; status: string; failed_attempts: number | null }
+const COLS = "id,name,email,role,password_salt,password_hash,status,failed_attempts"
+const toUser = (r: UserRow): UserRecord => ({ id: r.id, name: r.name, email: r.email, role: r.role as UserRole, passwordSalt: r.password_salt, passwordHash: r.password_hash, status: r.status as UserRecord["status"], failedAttempts: r.failed_attempts ?? 0 })
 const normEmail = (email: string) => email.trim().toLowerCase()
 
 const COOKIE = "spatial_session"
@@ -33,10 +33,27 @@ export async function createUser(input: { name: string; email: string; role: Use
   if (error) { if (error.code === "23505") throw new EmailExistsError(); throw error }
   return toUser(data as UserRow)
 }
-export async function updateUser(id: string, patch: { role?: UserRole; status?: UserRecord["status"] }): Promise<UserRecord | null> {
-  const { data, error } = await db().from("staff_users").update(patch).eq("id", id).select(COLS).maybeSingle()
+export async function updateUser(id: string, patch: { role?: UserRole; status?: UserRecord["status"]; passwordSalt?: string; passwordHash?: string }): Promise<UserRecord | null> {
+  const { passwordSalt, passwordHash, ...rest } = patch
+  const row: Record<string, unknown> = { ...rest }
+  if (passwordSalt && passwordHash) { row.password_salt = passwordSalt; row.password_hash = passwordHash }
+  if (patch.status === "Active" || (passwordSalt && passwordHash)) row.failed_attempts = 0 // unlocking or resetting a password gives a fresh start
+  const { data, error } = await db().from("staff_users").update(row).eq("id", id).select(COLS).maybeSingle()
   if (error) throw error
   return data ? toUser(data as UserRow) : null
+}
+export const MAX_FAILED_LOGINS = 3
+/** Counts a wrong password. At 3 in a row the account locks itself, except Senior officers, who are never auto-locked. */
+export async function recordFailedLogin(user: UserRecord): Promise<{ locked: boolean }> {
+  const attempts = (user.failedAttempts ?? 0) + 1
+  const lock = user.role !== "Senior officer" && attempts >= MAX_FAILED_LOGINS
+  const { error } = await db().from("staff_users").update(lock ? { failed_attempts: attempts, status: "Locked" } : { failed_attempts: attempts }).eq("id", user.id)
+  if (error) throw error
+  return { locked: lock }
+}
+export async function clearFailedLogins(user: UserRecord) {
+  if ((user.failedAttempts ?? 0) === 0) return
+  await db().from("staff_users").update({ failed_attempts: 0 }).eq("id", user.id)
 }
 export async function deleteUser(id: string): Promise<boolean> {
   const { data, error } = await db().from("staff_users").delete().eq("id", id).select("id")

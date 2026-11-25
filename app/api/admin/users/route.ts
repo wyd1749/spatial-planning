@@ -32,17 +32,23 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   const actor = await currentUser(); if (!actor || actor.role !== "Senior officer") return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   try {
-    const { id, role, status } = await req.json()
-    const patch: { role?: UserRole; status?: "Active" | "Setup pending" } = {}
+    const { id, role, status, password } = await req.json()
+    const patch: { role?: UserRole; status?: "Active" | "Setup pending" | "Locked"; passwordSalt?: string; passwordHash?: string } = {}
     if (role !== undefined) { if (!roles.includes(role)) return NextResponse.json({ error: "Invalid role" }, { status: 400 }); patch.role = role }
     if (status !== undefined) {
-      if (!["Active", "Setup pending"].includes(status)) return NextResponse.json({ error: "Invalid status" }, { status: 400 })
-      if (id === actor.id && status !== "Active") return NextResponse.json({ error: "You cannot disable your own account." }, { status: 400 })
+      if (!["Active", "Setup pending", "Locked"].includes(status)) return NextResponse.json({ error: "Invalid status" }, { status: 400 })
+      if (id === actor.id && status !== "Active") return NextResponse.json({ error: "You cannot lock or disable your own account." }, { status: 400 })
       patch.status = status
     }
+    if (password !== undefined) {
+      if (typeof password !== "string" || password.length < 8) return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 })
+      const credential = hashPassword(password)
+      patch.passwordSalt = credential.salt; patch.passwordHash = credential.hash
+    }
+    if (!Object.keys(patch).length) return NextResponse.json({ error: "Nothing to update." }, { status: 400 })
     const user = await updateUser(id, patch)
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
-    await logActivity(actor.name, "updated staff account", user.email)
+    await logActivity(actor.name, password !== undefined ? "reset the password for" : status === "Locked" ? "locked the account of" : status === "Active" ? "unlocked the account of" : "updated staff account", user.email)
     return NextResponse.json({ user: strip(user) })
   } catch { return NextResponse.json({ error: "Unable to update account" }, { status: 500 }) }
 }
