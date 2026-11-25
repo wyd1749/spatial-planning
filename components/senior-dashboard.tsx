@@ -129,7 +129,7 @@ export default function SeniorDashboard({ seniorName }: { seniorName: string }) 
               <label className="pt-field">Initial password<input className="pt-in" type="password" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} minLength={8} placeholder="At least 8 characters" required /></label>
               <label className="pt-field">Assign role<select className="pt-in" value={role} onChange={e => setRole(e.target.value as StaffRole)}><option>Planning officer</option><option>Management</option><option>Senior officer</option></select></label>
               <div className="pt-note info"><ShieldCheck size={17} /><span>{roleDescriptions[role]}</span></div>
-              <div className="pt-note warn"><Lock size={17} /><span>Passwords are stored as salted hashes in the JSON file, not as readable text. Don’t use JSON-file storage for a public production deployment.</span></div>
+              <div className="pt-note warn" style={{ background: "#fee2e2", borderColor: "#fca5a5", color: "#b91c1c", fontWeight: 600 }}><Lock size={17} /><span>Passwords are stored as salted hashes in the JSON file, not as readable text. Don’t use JSON-file storage for a public production deployment.</span></div>
               <button className="pt-btn pri" type="submit">Create account <ArrowRight size={17} /></button>
             </form>
           )}
