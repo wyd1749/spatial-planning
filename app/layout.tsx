@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import './portal.css'
+import RouteLoader from '@/components/route-loader'
 
 export const metadata: Metadata = {
   title: 'Spatial Planning | Applications Portal',
@@ -42,6 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
+        <RouteLoader />
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
