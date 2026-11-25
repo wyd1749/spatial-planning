@@ -61,11 +61,11 @@ function Loader({ logo }: { logo: string }) {
       <style>{`
         .rl-wrap{position:fixed;inset:0;z-index:9999;display:grid;place-content:center;justify-items:center;gap:18px;background:rgba(244,248,254,.97);backdrop-filter:blur(6px);transition:opacity .35s ease}
         .rl-wrap.rl-out{opacity:0;pointer-events:none}
-        .rl-spin{position:relative;width:132px;height:132px;display:grid;place-items:center}
+        .rl-spin{position:relative;width:168px;height:168px;display:grid;place-items:center}
         .rl-spin svg{position:absolute;inset:0;width:100%;height:100%;animation:rl-rot 1.1s linear infinite}
         .rl-track{fill:none;stroke:#dbe7f5;stroke-width:5}
         .rl-arc{fill:none;stroke:#1478e8;stroke-width:5;stroke-linecap:round;stroke-dasharray:90 250}
-        .rl-logo{width:72px;height:72px;object-fit:contain;animation:rl-pulse 1.6s ease-in-out infinite}
+        .rl-logo{width:104px;height:104px;object-fit:contain;animation:rl-pulse 1.6s ease-in-out infinite}
         .rl-text{margin:0;font:600 14px/1 system-ui,sans-serif;color:#4b628c;letter-spacing:.06em}
         @keyframes rl-rot{to{transform:rotate(360deg)}}
         @keyframes rl-pulse{50%{transform:scale(.93);opacity:.85}}
